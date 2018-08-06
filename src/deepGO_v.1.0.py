@@ -279,12 +279,13 @@ def main(argv):
                                                                                      np.round(prec, 2)[thres],
                                                                                      np.round(recall, 2)[thres],
                                                                                      np.round(f1, 2)[thres]))
-                    log.info('selected threshold is {}'.format(thres / 10 + 0.1))
+                    log.info('selected threshold is {}'.format(THRESHOLD_RANGE[thres]))
                     if f1[thres] > (bestf1 + 1e-3):
                         bestf1 = f1[thres]
                         bestthres = THRESHOLD_RANGE[thres]
                         wait = 0
-                        chkpt.save(sess, os.path.join(FLAGS.outputdir, modelsavename,
+                        chkpt.save(sess, os.path.join(FLAGS.outputdir,
+                                                      modelsavename,
                                                       'model_{}_{}'.format(FLAGS.function, step)),
                                    global_step=step, write_meta_graph=metagraphFlag)
                         metagraphFlag = False
@@ -306,7 +307,7 @@ def main(argv):
     prec, recall, f1 = predict_evaluate(test_iter, [bestthres], placeholders,
                                         os.path.join(FLAGS.outputdir, modelsavename))
     log.info('test results')
-    log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 2), round(recall, 2), round(f1, 2)))
+    log.info('precision: {}, recall: {}, F1: {}'.format(np.round(prec, 3), np.round(recall, 3), np.round(f1, 3)))
 
 
 if __name__ == "__main__":
