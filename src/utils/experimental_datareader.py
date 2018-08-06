@@ -13,6 +13,7 @@ import json
 import logging
 import tarfile
 import wget
+import ipdb
 import pickle
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
@@ -546,10 +547,7 @@ def iter_test():
     ti = TrainIterator('MF', 256, featuretype='ngrams',max_batch_count = 100,seqlen=2002)
     for x, y in ti:
         print(x.shape, y.shape)
-        n_values = len(ti.ngram_map_obj.ngram_map) + 1
-        print (x[10])
-        print(np.eye(n_values)[x[10]])
-        exit(1)
+
 
 # ----- #
 

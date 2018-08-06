@@ -82,8 +82,11 @@ def create_args():
 
 def predict_evaluate(dataiter, thres, placeholders, modelpath):
     avgPrec, avgRecall, avgF1 = 0.0, 0.0, 0.0
-    with tf.Session() as sess:
-        saver = tf.train.import_meta_graph(glob(os.path.join(modelpath, 'model*meta'))[0])
+    new_graph = tf.Graph()
+    with tf.Session(graph=new_graph) as sess:
+        saver = tf.train.import_meta_graph(
+            glob(os.path.join(
+            modelpath, 'model*meta'))[0])
         saver.restore(sess, tf.train.latest_checkpoint(modelpath))
         log.info('restored model')
         graph = tf.get_default_graph()
@@ -104,8 +107,10 @@ def predict_evaluate(dataiter, thres, placeholders, modelpath):
             avgRecall += recall
             avgF1 += f1
             step += 1
-
-        dataiter.close()
+        try :
+            dataiter.close()
+        except:
+            pass
         log.info('read {} test batches'.format(step))
     return avgPrec / step, avgRecall / step, avgF1 / step
 

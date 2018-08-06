@@ -37,10 +37,12 @@ class ConvAutoEncoder(object):
         self.set_hyper_parameters()
         self.set_variable_names()
 
-    def build(self):
+    def build(self , pretrained_dir = None):
         self.init_wts()
         self.build_input()
         self.build_encoder_decoder()
+        if pretrained_dir is not None :
+            return
         self.build_train()
 
     # Names for the Tensorflow Graph
@@ -141,7 +143,10 @@ class ConvAutoEncoder(object):
                     strides=self.strides[i],
                     padding='SAME'
                 ) + self.conv_b[i]
+                print(_conv_i)
+
                 conv_i = tf.nn.relu(_conv_i)
+                # self.restore_op_name.append('Encoder/'+'Relu_'+str(i+1)+':0')
                 # print(conv_i)
                 log.info('[Conv AE] Encoder layer i output shape : {}'.format(conv_i.shape))
                 conv_layer_ops.append(conv_i)
@@ -149,6 +154,8 @@ class ConvAutoEncoder(object):
                 cur_inp = conv_i
 
         self.enc_out = cur_inp
+
+        print(' >>> ', self.enc_out)
         with tf.name_scope('Decoder'):
             deconv_layer_ops = []
             for i in range(self.num_conv_layers - 1, -1, -1):
@@ -184,6 +191,7 @@ class ConvAutoEncoder(object):
         log.info('[Conv AE] Final output shape : ' + str(rev_emb_op.shape))
         self.final_op = rev_emb_op
         print('Shape of final_op', self.final_op)
+        self.names =  [n.name+':0'  for n in tf.get_default_graph().as_graph_def().node]
         return
 
     def build_train(self):
@@ -208,6 +216,8 @@ class ConvAutoEncoder(object):
         return
 
 
+    def return_wt_list_to_restore(self):
+        return self.names
 
 
 

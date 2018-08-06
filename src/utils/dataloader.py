@@ -282,7 +282,11 @@ class FeatureExtractor():
 
     @staticmethod
     def to_ngrams(seq, ngram=3):
-        return [FeatureExtractor._ngram2id(seq[i: i + ngram]) for i in range(len(seq) - ngram + 1)]
+        return [
+            FeatureExtractor._ngram2id(
+                seq[i: i + ngram]
+            ) for i in range(len(seq) - ngram + 1)
+        ]
 
     @staticmethod
     def _ngram2id(ngram):
@@ -295,7 +299,10 @@ class FeatureExtractor():
 
     @staticmethod
     def to_onehot(seq):
-        return [FeatureExtractor._aminoacid2id(aacid) for aacid in seq]
+        return [
+            FeatureExtractor._aminoacid2id(aacid)
+            for aacid in seq
+        ]
 
     @staticmethod
     def _aminoacid2id(aacid):
@@ -332,7 +339,7 @@ class FeatureExtractor():
 
 class DataLoader(object):
     def __init__(self, filename='/groups/fungcat/datasets/current/fasta/AllSeqsWithGO_expanded.tar'):
-    # def __init__(self, filename='/home/sathap1/workspace/bioFunctionPrediction/AllSeqsWithGO_expanded.tar'):
+
         self.dir = os.path.isdir(filename)
         if self.dir:
             self.tarobj = filename
@@ -391,11 +398,19 @@ class DataLoader(object):
 
 class DataIterator(object):
     def __init__(self, batchsize=1,
-                 functype='', size=100, seqlen=2000,
-                 featuretype='onehot', dataloader=None,
-                 numfiles=1, ngramsize=3, all_labels=True,
-                 numfuncs=0, onlyLeafNodes=False, autoreset=False,
-                 filterByEvidenceCodes=False, filename=None,
+                 functype='',
+                 size=100,
+                 seqlen=2000,
+                 featuretype='onehot',
+                 dataloader=None,
+                 numfiles=1,
+                 ngramsize=3,
+                 all_labels=True,
+                 numfuncs=0,
+                 onlyLeafNodes=False,
+                 autoreset=False,
+                 filterByEvidenceCodes=False,
+                 filename=None,
                  **kwargs):
         self.fobj = []
         self.fnames = []
