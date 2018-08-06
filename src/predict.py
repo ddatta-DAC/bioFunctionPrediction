@@ -18,20 +18,21 @@ __processor__ = 'deepGO'
 import time
 import pandas as pd
 import tensorflow as tf
-from utils.dataloader import GODAG, FeatureExtractor
-from utils.dataloader import DataIterator, DataLoader
 # from models.encoders import CNNEncoder
 # from models.decoders import HierarchicalGODecoder
 import json
 import logging
 import os
 from glob import glob
+try:
+    from utils.dataloader import GODAG, FeatureExtractor
+    from utils.dataloader import DataIterator, DataLoader
+except:
+    from bioFunctionPrediction.src.utils.dataloader import GODAG, FeatureExtractor
+    from bioFunctionPrediction.src.utils.dataloader import DataIterator, DataLoader
 
-# logging.basicConfig(filename='{}.log'.format(__processor__),
-                    # filemode='w', level=logging.DEBUG)
 
 log = logging.getLogger('predict')
-
 FLAGS = tf.app.flags.FLAGS
 
 def create_args():

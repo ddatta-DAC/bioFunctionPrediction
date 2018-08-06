@@ -14,6 +14,8 @@ import logging
 import tarfile
 import wget
 import pickle
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
 
 log = logging.getLogger('root.DataLoader')
 
@@ -277,7 +279,7 @@ class BaseDataIterator:
             functype,
             batch_size,
             max_batch_count = None,
-            seqlen=2000,
+            seqlen=200,
             featuretype='onehot',
             autoreset=False,
     ):
@@ -297,7 +299,12 @@ class BaseDataIterator:
         self.expectedshape = ((self.max_seq_len - self.ngram_size + 1) if self.featuretype == 'ngrams' else self.max_seq_len)
         self.x_column = 'sequences'
         self.input_column = 'x'
+        print('Max Seq len' , self.max_seq_len)
         print('Expected shape', self.expectedshape , 'x_column', self.x_column)
+        if self.featuretype == 'onehot':
+            self.vocab_size = len(self.aa_map_obj.aminoacid_map)
+        else :
+            self.vocab_size = len(self.ngram_map_obj.ngram_map)
         return
 
     def __iter__(self):
@@ -321,7 +328,7 @@ class BaseDataIterator:
         def aux_1(row):
             seq = row[self.x_column]
             res = self.aa_map_obj.to_onehot(seq)
-            return pad_seq(res)
+            return pad_seq_1(res)
         
         _df = pd.DataFrame(self.df,copy=True)
         _df['x'] = self.df.apply(aux_1, axis=1)
@@ -358,6 +365,19 @@ class BaseDataIterator:
         except:
             pass
         return _df
+
+    # def convert_to_1hot(self, _x):
+    #     res = []
+    #     for _xi in _x :
+    #         onehot_enc = OneHotEncoder(n_values=self.vocab_size)
+    #         print(onehot_enc.transform(np.reshape(_x,[1,-1])))
+    #         exit(1)
+    #         # print(tmp.shape)
+    #         # res.append(tmp)
+    #     res = np.array(res)
+    #     print(res.shape)
+    #     return res
+
 
     def format_batch_data(self, _df):
         y = list(_df[self.y_column])
@@ -523,11 +543,19 @@ def functional_test():
 
 
 def iter_test():
-    ti = TrainIterator('MF', 256, featuretype='ngrams',max_batch_count = 100)
+    ti = TrainIterator('MF', 256, featuretype='ngrams',max_batch_count = 100,seqlen=2002)
     for x, y in ti:
         print(x.shape, y.shape)
+        n_values = len(ti.ngram_map_obj.ngram_map) + 1
+        print (x[10])
+        print(np.eye(n_values)[x[10]])
+        exit(1)
 
 # ----- #
 
+
+_Amino_Acid_Map = Amino_Acid_Map()
+_Ngram_Map = Ngram_Map()
+
 # iter_test()
-functional_test()
+# functional_test()

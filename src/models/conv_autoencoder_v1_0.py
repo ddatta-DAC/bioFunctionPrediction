@@ -25,7 +25,7 @@ class ConvAutoEncoder(object):
                     vocab_size=24,
                     maxlen=2000,
                     batch_size=128,
-                    embedding_dim=256
+                    embedding_dim=512
                     ):
 
         self.embedding_dim = embedding_dim
@@ -179,18 +179,24 @@ class ConvAutoEncoder(object):
 
         dec_op = deconv_layer_ops[-1]
         cur_op = tf.squeeze(dec_op, axis=-1)
-
-        rev_emb_op = tf.einsum('ijk,kl->ijl', cur_op, tf.transpose(self.embmatrix))
+        print('Shape of cur_op before reverse embed ', cur_op)
+        rev_emb_op = tf.einsum('ijk,kl->ijl', cur_op, tf.transpose(self.embed_w))
         log.info('[Conv AE] Final output shape : ' + str(rev_emb_op.shape))
         self.final_op = rev_emb_op
+        print('Shape of final_op', self.final_op)
         return
 
     def build_train(self):
-        _x = self.x_input
+        _x = self.x
         _y = self.final_op
-        # self.loss1 = tf.losses.sparse_softmax_cross_entropy(labels=_x, logits=_y)
-        # self.loss2 = tf.losses.softmax_cross_entropy(onehot_labels=tf.one_hot(_x, depth=self.vocab_size + 1), logits=_y)
-        ssm = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=_x, logits=_y)
+        print ('>>>', _x.shape)
+        print ('>>>', _y.shape)
+
+        if tf.__version__ >= '1.9.0' :
+            ssm = tf.nn.softmax_cross_entropy_with_logits_v2(labels=_x, logits=_y)
+        else :
+            ssm = tf.nn.softmax_cross_entropy_with_logits(labels=_x, logits=_y)
+
         self.loss = tf.reduce_mean(tf.reduce_mean(ssm, axis=1), name='encoder_loss')
         self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
         self.train = self.optimizer.minimize(self.loss)

@@ -3,3 +3,5 @@
 results/*/model*
 resources/data/*
 src/testout/*
+src/models/word2vec_1/*.pkl
+
