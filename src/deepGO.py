@@ -28,16 +28,27 @@ try:
     from models.encoders import CNNEncoder
     from models.decoders import HierarchicalGODecoder
     from predict import predict_evaluate
-    import utils.experimental_datareader as new_dataloader
+    # import utils.experimental_datareader as new_dataloader
+    from utils.dataloader import FeatureExtractor
+    from utils.dataloader import GODAG
+    import utils
+    from utils.dataloader import DataLoader
+    from utils.dataloader import DataIterator
+
 except:
     import bioFunctionPrediction.src.utils.experimental_datareader as dataloader
     from bioFunctionPrediction.src.models.encoders import CNNEncoder
     from bioFunctionPrediction.src.models.decoders import HierarchicalGODecoder
     from bioFunctionPrediction.src.predict import predict_evaluate
-    import bioFunctionPrediction.src.utils.experimental_datareader as new_dataloader
-
+    # import bioFunctionPrediction.src.utils.experimental_datareader as new_dataloader
+    from bioFunctionPrediction.src.utils.dataloader import FeatureExtractor
+    from bioFunctionPrediction.src.utils.dataloader import GODAG
+    import bioFunctionPrediction.src.utils as utils
+    from bioFunctionPrediction.src.utils.dataloader import DataLoader
+    from bioFunctionPrediction.src.utils.dataloader import DataIterator
 
 # ------------------------- #
+
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('root')
@@ -101,6 +112,11 @@ def create_args():
         '',
         'location of pretrained embedding'
     )
+    tf.app.flags.DEFINE_string(
+        'predict',
+        '',
+        'run prediction'
+    )
     return
 
 
@@ -149,11 +165,47 @@ def main(argv):
         pretrained, ngrammap = utils.load_pretrained_embedding(FLAGS.pretrained)
         FeatureExtractor.ngrammap = ngrammap
 
+    if FLAGS.predict:
+        log.info('running prediction')
+        test_dataiter = DataIterator(batchsize=FLAGS.batchsize, size=FLAGS.testsize, seqlen=FLAGS.maxseqlen,
+                                     dataloader=data, functype=FLAGS.function, featuretype='ngrams',
+                                     filename='test', filterByEvidenceCodes=True)
+
+        placeholders = ['x_in:0', 'y_out:0', 'thres:0']
+        modelsavename = FLAGS.predict
+        bestthres = 0.2
+        prec, recall, f1 = predict_evaluate(test_dataiter, [bestthres], placeholders, modelsavename)
+        log.info('test results')
+        log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 2), round(recall, 2), round(f1, 2)))
+        data.close()
+
+        exit(0)
+
+
     with tf.Session() as sess:
 
-        valid_dataiter = new_dataloader.ValidIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen , max_batch_count = FLAGS.validationsize )  
-        train_iter = new_dataloader.TrainIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen, max_batch_count = FLAGS.trainsize )
-        encoder = CNNEncoder(vocab_size=len(FeatureExtractor.ngrammap),inputsize=train_iter.expectedshape,pretrained_embedding=pretrained).build()
+        # valid_dataiter = new_dataloader.ValidIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen , max_batch_count = FLAGS.validationsize )
+        # train_iter = new_dataloader.TrainIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen, max_batch_count = FLAGS.trainsize )
+
+
+        train_iter = DataIterator(batchsize=FLAGS.batchsize, size=FLAGS.trainsize,
+                                  seqlen=FLAGS.maxseqlen, dataloader=data,
+                                  filename='train', filterByEvidenceCodes=True,
+                                  functype=FLAGS.function, featuretype='ngrams')
+
+        valid_dataiter = DataIterator(batchsize=FLAGS.batchsize, size=FLAGS.validationsize, seqlen=FLAGS.maxseqlen,
+                                      dataloader=data, functype=FLAGS.function, featuretype='ngrams',
+                                      filename='validation', filterByEvidenceCodes=True)
+
+        test_dataiter = DataIterator(batchsize=FLAGS.batchsize, size=FLAGS.testsize, seqlen=FLAGS.maxseqlen,
+                                     dataloader=data, functype=FLAGS.function, featuretype='ngrams',
+                                     filename='test', filterByEvidenceCodes=True)
+
+        encoder = CNNEncoder(vocab_size=len(FeatureExtractor.ngrammap),
+                             inputsize=train_iter.expectedshape,
+                             pretrained_embedding=pretrained).build()
+
+
         log.info('built encoder')
         decoder = HierarchicalGODecoder(funcs, encoder.outputs, root=FLAGS.function).build(GODAG)
         log.info('built decoder')
@@ -170,8 +222,8 @@ def main(argv):
         bestthres = 0
         metagraphFlag = True
         log.info('starting epochs')
-        tf.train.export_meta_graph(filename=os.path.join(FLAGS.outputdir, modelsavename,
-                                                        'model_{}.meta'.format(FLAGS.function)))
+        # tf.train.export_meta_graph(filename=os.path.join(FLAGS.outputdir, modelsavename,
+        #                                                'model_{}.meta'.format(FLAGS.function)))
         for epoch in range(FLAGS.num_epochs):
             log.info('************EPOCH-{} *******'.format(epoch))
             for x, y in train_iter:
@@ -200,7 +252,12 @@ def main(argv):
                         wait = 0
                         chkpt.save(sess, os.path.join(FLAGS.outputdir, modelsavename,
                                                         'model_{}_{}'.format(FLAGS.function, step)),
-                                    global_step=step, write_meta_graph=metagraphFlag)
+                                    global_step=step)
+                        if metagraphFlag:
+                            log.info('saving meta graph')
+                            chkpt.export_meta_graph(filename=os.path.join(FLAGS.outputdir, modelsavename,
+                                                        'model_{}.meta'.format(FLAGS.function)))
+
                         metagraphFlag = False
                     else:
                         wait += 1
@@ -211,7 +268,7 @@ def main(argv):
             train_iter.reset()
     
     log.info('testing model')
-    test_dataiter = new_dataloader.TestIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen, max_batch_count = FLAGS.testsize )
+    # test_dataiter = new_dataloader.TestIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen, max_batch_count = FLAGS.testsize )
 
     placeholders = ['x_in:0', 'y_out:0', 'thres:0']
     prec, recall, f1 = predict_evaluate(test_dataiter, [bestthres], placeholders, os.path.join(FLAGS.outputdir, modelsavename))
