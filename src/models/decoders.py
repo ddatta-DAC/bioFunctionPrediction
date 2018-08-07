@@ -146,7 +146,7 @@ class HierarchicalGODecoder(object):
         #     name='prediction'
         # )
         self.prediction = self.output
-        print('Prediction ',self.prediction.shape)
+        print('Prediction ', self.prediction.shape)
         self.precision, self.recall, self.f1score = calc_performance_metrics(self.ys_, self.prediction)
         tf.summary.scalar('f1', self.f1score)
         self.summary = tf.summary.merge_all()

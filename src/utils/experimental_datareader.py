@@ -150,7 +150,7 @@ def initialize():
     return
 
 
-initialize()
+# initialize()
 
 
 # ---------------------------------------- #
@@ -389,9 +389,9 @@ class BaseDataIterator:
         return x, y
 
     def generate_batch(self):
-        log.info(
-            'Data Iterator object geenrating batch of size :: {}'.format(self.batch_size)
-        )
+        #log.info(
+         #   'Data Iterator object geenrating batch of size :: {}'.format(self.batch_size)
+        #)
 
         start_idx = self.cur_idx
         end_idx = self.cur_idx + self.batch_size - 1

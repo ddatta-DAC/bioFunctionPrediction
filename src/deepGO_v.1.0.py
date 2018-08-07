@@ -22,7 +22,7 @@ import json
 import logging
 import os
 import numpy as np
-import ipdb
+#import ipdb
 
 try:
     import utils.experimental_datareader as dataloader
@@ -31,7 +31,8 @@ try:
     from models.decoders import HierarchicalGODecoder
     from predict import predict_evaluate
     import utils.experimental_datareader as new_dataloader
-    from utils.dataloader import GODAG, FeatureExtracto
+    from utils.dataloader import GODAG
+    from utils.dataloader import FeatureExtractor
     import utils.dataloader as old_dataloader
     import utils
 except:
@@ -177,7 +178,8 @@ def validate(
 def main(argv):
 
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format(FLAGS.function)))['functions'].values
-    funcs = GODAG.initialize_idmap(funcs, FLAGS.function)
+    _ = GODAG.initialize_idmap(funcs, FLAGS.function)
+    
 
     log.info('GO DAG initialized. Updated function list :: {}'.format(len(funcs)))
     FeatureExtractor.load(FLAGS.resources)
@@ -256,7 +258,7 @@ def main(argv):
             for x, y in train_iter:
                 if x.shape[0] != y.shape[0]:
                     raise Exception('invalid, x-{}, y-{}'.format(str(x.shape), str(y.shape)))
-                print('Shape of x and y', x.shape, y.shape)
+               
 
                 _, loss, summary = sess.run(
                     [decoder.train, decoder.loss, decoder.summary],
