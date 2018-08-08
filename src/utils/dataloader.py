@@ -117,7 +117,11 @@ def load_pretrained_embedding(path):
     df = pd.read_csv(path, sep='\t', index_col=0)
     npmat = df.as_matrix().astype(np.float32)
     indexmap = {s: (i + 1) for i, s in enumerate(df.index)}
-    npmat = np.concatenate([np.zeros((1, npmat.shape[1]), dtype=np.float32), npmat], axis=0)
+    npmat = np.concatenate([
+        np.zeros((1, npmat.shape[1]), dtype=np.float32),
+        npmat],
+        axis=0
+    )
     return npmat, indexmap
 
 
@@ -240,7 +244,8 @@ class GODAG(object):
     def get_id(node):
         if node == 'STOPGO':
             return -1
-
+        if GODAG.idmap is None:
+            exit(1)
         try:
             return GODAG.idmap[GODAG.get(node)]
         except KeyError as e:
@@ -507,9 +512,10 @@ class DataIterator(object):
                         #funcs = funcs[:self.limit]
                     ids = [GODAG.get_id(fn) for fn in funcs]
                     labels.append([i for i  in ids  if i != -1])
+
                 else:
                     # labels.append(GODAG.to_npy(funcs))
-                    #pdb.set_trace()
+                    # pdb.set_trace()
                     labels.append(GODAG.get_fullmat(funcs))
 
                 inputs.append(self.featureExt(seq))
@@ -555,14 +561,15 @@ class DataIterator(object):
 
     def _format(self, inputs, labels):
         inputs = pd.DataFrame(inputs, dtype=np.int32).fillna(0)
-        #pdb.set_trace()
         if isinstance(labels[0], list):
-            #labels = GODAG.get_fullmat(labels)
+
             labels = pd.DataFrame(labels, dtype=np.int32).fillna(0, downcast='infer').as_matrix()
             if labels.shape[1] < self.numfuncs:
                 diff = self.numfuncs - labels.shape[1]
-                labels = np.hstack([labels, np.zeros((labels.shape[0], diff), dtype=np.int32)])
-            #log.info('percentage of zeros in labelspace-{}/160'.format((labels==0).sum()))
+                labels = np.hstack([
+                    labels,
+                    np.zeros((labels.shape[0], diff), dtype=np.int32)]
+                )
         else:
             labels = np.vstack(labels)
             if not np.any(labels):
@@ -570,9 +577,13 @@ class DataIterator(object):
 
         # log.info('{}'.format(str(inputs.shape)))
         if inputs.shape[1] < self.expectedshape:
-            inputs = np.concatenate([inputs.as_matrix(),
-                                      np.zeros((inputs.shape[0],
-                                                self.expectedshape - inputs.shape[1]))], axis=1)
+            inputs = np.concatenate([
+                inputs.as_matrix(),
+                np.zeros((
+                    inputs.shape[0],
+                    self.expectedshape - inputs.shape[1]
+                ))],
+                axis=1)
         # log.info('batch shape is {}-{}'.format(inputs.shape, labels.shape))
         # log.info('max id is {}'.format(np.max(inputs)))
         if labels.shape[1] < 10:
@@ -580,6 +591,8 @@ class DataIterator(object):
 
         if self.all_labels is False:
             labels = labels[:, :self.numfuncs]
+
+
 
         return inputs, labels
 

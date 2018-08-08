@@ -27,7 +27,7 @@ class ConvAutoEncoder(object):
                     batch_size=128,
                     embedding_dim=512
                     ):
-
+        self.trainable = False
         self.embedding_dim = embedding_dim
         self.batch_size = batch_size
         self.set_hyper_parameters()
@@ -38,6 +38,11 @@ class ConvAutoEncoder(object):
         self.set_variable_names()
 
     def build(self , pretrained_dir = None):
+        if pretrained_dir is None:
+            self.trainable = True
+        else :
+            self.trainable = False
+
         self.init_wts()
         self.build_input()
         self.build_encoder_decoder()
@@ -90,11 +95,15 @@ class ConvAutoEncoder(object):
 
     def get_variable(self, shape, name=None):
         with tf.name_scope('weight_or_bias'):
-            initial = tf.truncated_normal(
+            initial_val = tf.truncated_normal(
                 shape,
                 stddev=0.1
             )
-            return tf.Variable(initial_value=initial, name=name)
+            return tf.Variable(
+                initial_value=initial_val,
+                name=name,
+                trainable=self.trainable
+            )
 
     def init_wts(self):
         # Weights for Embedding Layer
@@ -155,7 +164,6 @@ class ConvAutoEncoder(object):
 
         self.enc_out = cur_inp
 
-        print(' >>> ', self.enc_out)
         with tf.name_scope('Decoder'):
             deconv_layer_ops = []
             for i in range(self.num_conv_layers - 1, -1, -1):

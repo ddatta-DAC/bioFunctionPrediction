@@ -75,10 +75,11 @@ class HierarchicalGODecoder(object):
 
     def init_variables(self, godag):
         self.inputs = tf.contrib.layers.flatten(self.inputs)
-        #y_dim = len(godag.GOIDS)
+
         y_dim = len(self.funcs)
+        print(' Decoder y dim ',  len(godag.GOIDS))
         self.ys_ = tf.placeholder(
-            shape=[None, y_dim],
+            shape=[None,  len(godag.GOIDS)],
             dtype=tf.float32, name='y_out'
         )
         self.threshold = tf.placeholder(shape=(1,), dtype=tf.float32, name='thres')
@@ -128,24 +129,20 @@ class HierarchicalGODecoder(object):
                 logits=logits
             )
         )
-        # euclideanloss = tf.reduce_mean(tf.square(1 - self.ys_[:, :len(self.funcs)] * self.output))
 
-        # self.loss += euclideanloss
         self.finalloss = self.loss + self.prior_loss
         tf.summary.scalar('loss', self.finalloss)
         self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
         self.train = self.optimizer.minimize(self.finalloss)
+        self.prediction = tf.concat([
+            self.output,
+            tf.zeros((
+                tf.shape(self.output)[0],len(godag.GOIDS) - len(self.funcs)))
+            ],
+            axis=1,
+            name='prediction'
+        )
 
-        # self.prediction = tf.concat([
-        #     self.output,
-        #     tf.zeros((
-        #         tf.shape(self.output)[0],
-        #         len(godag.GOIDS) - len(self.funcs)))
-        #     ],
-        #     axis=1,
-        #     name='prediction'
-        # )
-        self.prediction = self.output
         print('Prediction ', self.prediction.shape)
         self.precision, self.recall, self.f1score = calc_performance_metrics(self.ys_, self.prediction)
         tf.summary.scalar('f1', self.f1score)
