@@ -34,6 +34,7 @@ try:
     import utils
     from utils.dataloader import DataLoader
     from utils.dataloader import DataIterator
+    from predict import predict_evaluate, predict_validate
 
 except:
     import bioFunctionPrediction.src.utils.experimental_datareader as dataloader
@@ -46,7 +47,7 @@ except:
     import bioFunctionPrediction.src.utils as utils
     from bioFunctionPrediction.src.utils.dataloader import DataLoader
     from bioFunctionPrediction.src.utils.dataloader import DataIterator
-
+    from bioFunctionPrediction.src.predict import predict_evaluate, predict_validate
 # ------------------------- #
 
 
@@ -148,6 +149,14 @@ def validate(dataiter, sess, encoder, decoder, summary_writer):
     return (avgPrec / step, avgRecall / step, avgF1 / step)
 
 
+def dump_resources(outputdir):
+    # dump the amino acid mapping
+    FeatureExtractor.dump(outputdir)
+
+    # dump  go id mapping
+    GODAG.dump(outputdir)
+    return
+
 
 def main(argv):
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format(FLAGS.function)))['functions'].values
@@ -166,6 +175,15 @@ def main(argv):
         FeatureExtractor.ngrammap = ngrammap
 
     if FLAGS.predict:
+        # load GO ID MAPPING
+        with open(os.path.join(FLAGS.outputdir, 'GO_IDMAPPING.json')) as inf:
+            idmapping = json.load(inf)
+
+        GODAG.initialize_idmap(None, None, idmapping=idmapping)
+
+        #load ngram mapping
+        FeatureExtractor.load(FLAGS.outputdir)
+
         log.info('running prediction')
         test_dataiter = DataIterator(batchsize=FLAGS.batchsize, size=FLAGS.testsize, seqlen=FLAGS.maxseqlen,
                                      dataloader=data, functype=FLAGS.function, featuretype='ngrams',
@@ -173,10 +191,10 @@ def main(argv):
 
         placeholders = ['x_in:0', 'y_out:0', 'thres:0']
         modelsavename = FLAGS.predict
-        bestthres = 0.2
-        prec, recall, f1 = predict_evaluate(test_dataiter, [bestthres], placeholders, modelsavename)
+        bestthres = 0.1
+        prec, recall, f1 = predict_validate(test_dataiter, [bestthres], placeholders, modelsavename)
         log.info('test results')
-        log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 2), round(recall, 2), round(f1, 2)))
+        log.info('precision: {}, recall: {}, F1: {}'.format(np.round(prec, 3), np.round(recall, 3), np.round(f1, 3)))
         data.close()
 
         exit(0)
@@ -237,41 +255,43 @@ def main(argv):
                 train_writer.add_summary(summary, step)
                 log.info('step-{}, loss-{}'.format(step, round(loss, 2)))
                 step += 1
-                if step % (100) == 0:
-                    log.info('beginning validation')
-                    prec, recall, f1 = validate(valid_dataiter, sess, encoder, decoder, test_writer)
-                    thres = np.argmax(np.round(f1, 2))
-                    log.info('epoch: {} \n precision: {}, recall: {}, f1: {}'.format(epoch,
-                                                                                     np.round(prec, 2)[thres],
-                                                                                     np.round(recall, 2)[thres],
-                                                                                     np.round(f1, 2)[thres]))
-                    log.info('selected threshold is {}'.format(thres/10 + 0.1))
-                    if f1[thres] > (bestf1 + 1e-3):
-                        bestf1 = f1[thres]
-                        bestthres = THRESHOLD_RANGE[thres]
-                        wait = 0
-                        chkpt.save(sess, os.path.join(FLAGS.outputdir, modelsavename,
-                                                        'model_{}_{}'.format(FLAGS.function, step)),
-                                    global_step=step)
-                        if metagraphFlag:
-                            log.info('saving meta graph')
-                            chkpt.export_meta_graph(filename=os.path.join(FLAGS.outputdir, modelsavename,
-                                                        'model_{}.meta'.format(FLAGS.function)))
+            if True or step % (100) == 0:
+                log.info('beginning validation')
+                prec, recall, f1 = validate(valid_dataiter, sess, encoder, decoder, test_writer)
+                thres = np.argmax(np.round(f1, 2))
+                log.info('epoch: {} \n precision: {}, recall: {}, f1: {}'.format(epoch,
+                                                                                 np.round(prec, 2)[thres],
+                                                                                 np.round(recall, 2)[thres],
+                                                                                 np.round(f1, 2)[thres]))
+                log.info('selected threshold is {}'.format(THRESHOLD_RANGE[thres]))
+                if f1[thres] > (bestf1 + 1e-3):
+                    bestf1 = f1[thres]
+                    bestthres = THRESHOLD_RANGE[thres]
+                    wait = 0
+                    chkpt.save(sess, os.path.join(FLAGS.outputdir, modelsavename,
+                                                    'model_{}_{}'.format(FLAGS.function, step)),
+                                global_step=step, write_meta_graph=metagraphFlag)
+                    if metagraphFlag:
+                        log.info('saving meta graph')
+                        chkpt.export_meta_graph(filename=os.path.join(FLAGS.outputdir, modelsavename,
+                                                    'model_{}.meta'.format(FLAGS.function)))
 
-                        metagraphFlag = False
-                    else:
-                        wait += 1
-                        if wait > maxwait:
-                            log.info('f1 didnt improve for last {} validation steps, so stopping'.format(maxwait))
-                            break
+                    metagraphFlag = False
+                else:
+                    wait += 1
+                    if wait > maxwait:
+                        log.info('f1 didnt improve for last {} validation steps, so stopping'.format(maxwait))
+                        break
 
             train_iter.reset()
     
     log.info('testing model')
     # test_dataiter = new_dataloader.TestIterator( functype = FLAGS.function, batch_size = FLAGS.batchsize, featuretype = 'ngrams', seqlen=FLAGS.maxseqlen, max_batch_count = FLAGS.testsize )
 
+    dump_resources(FLAGS.outputdir)
     placeholders = ['x_in:0', 'y_out:0', 'thres:0']
     prec, recall, f1 = predict_evaluate(test_dataiter, [bestthres], placeholders, os.path.join(FLAGS.outputdir, modelsavename))
+    #prec, recall, f1 = predict_validate(test_dataiter, [bestthres], placeholders, os.path.join(FLAGS.outputdir, modelsavename))
     log.info('test results')
     log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 2), round(recall, 2), round(f1, 2)))
     data.close()
