@@ -244,7 +244,7 @@ def pretrain_cae_model(model_savename):
                     [cae_model_obj.loss, cae_model_obj.truepos],
                     feed_dict={cae_model_obj.x_input: x}
                 )
-                log.info('Validation loss at step: {} is {}, precision is: {}'.format(step, np.round(valid_loss, 3)))
+                log.info('Validation loss at step: {} is {} '.format(step, np.round(valid_loss, 3)))
 
                 if (valid_loss <= (bestloss + slack)) or (valid_loss + slack <= bestloss):
                     wait = 0

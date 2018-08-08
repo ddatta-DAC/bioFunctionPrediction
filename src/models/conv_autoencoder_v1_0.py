@@ -216,7 +216,7 @@ class ConvAutoEncoder(object):
         self.loss = tf.reduce_mean(tf.reduce_mean(ssm, axis=1), name='encoder_loss')
         self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
         self.train = self.optimizer.minimize(self.loss)
-        self.predicted_prob = tf.nn.softmax(_y, axis=-1, name='enc_predicted_seq')
+        self.predicted_prob = tf.nn.softmax(_y, name='enc_predicted_seq')
         self.max_out = tf.argmax(self.predicted_prob, axis=-1)
 
         self.truepos = tf.reduce_sum(tf.cast(self.max_out == _x, dtype=tf.float32))
