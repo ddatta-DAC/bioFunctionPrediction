@@ -102,11 +102,13 @@ def predict_evaluate(dataiter, thres, placeholders, modelpath):
                    graph.get_tensor_by_name('f1:0')]
         log.info('starting prediction')
         step = 0
+        print ( 'Testing model...')
+
         # pdb.set_trace()
         for x, y in dataiter:
             if x.shape[0] != y.shape[0]:
                 raise Exception('invalid, x-{}, y-{}'.format(str(x.shape), str(y.shape)))
-
+            
             prec, recall, f1 = sess.run(metrics, feed_dict={tf_y: y, tf_x: x, tf_thres: thres})
             # pdb.set_trace()
             log.info('f1 for batch:{}'.format(f1))
@@ -116,10 +118,17 @@ def predict_evaluate(dataiter, thres, placeholders, modelpath):
             step += 1
 
         dataiter.close()
-        log.info('read {} test batches of size-{}'.format(step, x.shape[0]))
-        log.info('f1:{}'.format(avgF1 / step))
-    return avgPrec / step, avgRecall / step, avgF1 / step
+        # log.info('read {} test batches of size-{}'.format(step, x.shape[0]))
+        if step > 0 :
+            log.info('f1:{}'.format(avgF1 / step))
+    try:
+        avgPrec = avgPrec
+        avgRecall = avgRecall / step 
+        avgF1 = avgF1 / step
+    except:
+        log.error('Error in calcultion of metrics! possible divison by 0')
 
+    return avgPrec , avgRecall, avgF1
 
 def predict_validate(dataiter, thres, placeholders, modelpath):
     step = 0

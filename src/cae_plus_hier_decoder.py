@@ -428,7 +428,7 @@ def build_model():
                     step, np.round(total_loss, 3)))
             step += 1
 
-            if step % (5) == 0 :
+            if step % (100) == 0 :
                 log.info('beginning validation')
                 prec, recall, f1 = validate(
                     valid_iter,
