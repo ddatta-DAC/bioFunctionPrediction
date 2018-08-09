@@ -11,7 +11,7 @@
 ##SBATCH -A fungcat
 
 ## Check sinfo before setting this
-#SBATCH --nodelist hu006
+#SBATCH --nodelist hu008
 
 #SBATCH -t 360:00
 #SBATCH --mem=30G
@@ -50,8 +50,7 @@ mkdir -p $OUTDIR
 
 BATCHSIZE=16
 
-python ${SCRIPT_ROOT}/cae_plus_hier_decoder.py --resources ${SCRIPT_ROOT}/../resources --function mf  --outputdir testout --trainsize $(( 18815 /  $BATCHSIZE )) --testsize  $(( 5846 /  $BATCHSIZE )) --validationsize  $(( 4704 /  $BATCHSIZE )) --inputfile ../resources/data/data_MF --batchsize $BATCHSIZE --num_epochs 10 --featuretype ngrams --maxseqlen
-2002
+python ${SCRIPT_ROOT}/cae_plus_hier_decoder.py --resources ${SCRIPT_ROOT}/../resources --function mf  --outputdir testout --trainsize $(( 18815 /  $BATCHSIZE )) --testsize  $(( 5846 /  $BATCHSIZE )) --validationsize  $(( 4704 /  $BATCHSIZE )) --inputfile ../resources/data/data_MF --batchsize $BATCHSIZE --num_epochs 10 --featuretype ngrams --maxseqlen 2002
 
 cd -
 source deactivate
