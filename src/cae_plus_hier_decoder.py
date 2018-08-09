@@ -371,6 +371,32 @@ def validate(dataiter, sess, x_inp, decoder, summary_writer):
     dataiter.reset()
     return (avgPrec / step, avgRecall / step, avgF1 / step)
 
+def test(dataiter, sess, x_inp, decoder, summary_writer):
+    step = 0
+    avgPrec, avgRecall, avgF1 = (np.zeros_like(THRESHOLD_RANGE),
+                                 np.zeros_like(THRESHOLD_RANGE),
+                                 np.zeros_like(THRESHOLD_RANGE)
+                                 )
+    for x, y in dataiter:
+        prec, recall, f1 = [], [], []
+        for thres in THRESHOLD_RANGE:
+            p, r, f, summary = sess.run([decoder.precision, decoder.recall,
+                                         decoder.f1score, decoder.summary],
+                                        feed_dict={decoder.ys_: y,
+                                                   x_inp: x,
+                                                   decoder.threshold: [thres]})
+            summary_writer.add_summary(summary, step)
+            prec.append(p)
+            recall.append(r)
+            f1.append(f)
+
+        avgPrec += prec
+        avgRecall += recall
+        avgF1 += f1
+        step += 1
+
+    dataiter.reset()
+    return (avgPrec / step, avgRecall / step, avgF1 / step)
 
 def build_model():
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
@@ -428,7 +454,7 @@ def build_model():
                     step, np.round(total_loss, 3)))
             step += 1
 
-            if step % (100) == 0 :
+            if step % (5) == 0 :
                 log.info('beginning validation')
                 prec, recall, f1 = validate(
                     valid_iter,
@@ -469,12 +495,11 @@ def build_model():
         train_iter.reset()
 
         log.info('testing model')
-        placeholders = [x_inp.name, 'y_out:0', 'thres:0']
-        prec, recall, f1 = predict_evaluate(
-            test_iter,
-            [best_thres],
-            placeholders,
-            os.path.join(FLAGS.outputdir, model_savename)
+        # placeholders = [x_inp.name, 'y_out:0', 'thres:0']
+        prec, recall, f1 = test(test_iter, sess,
+                    x_inp,
+                    decoder,
+                    test_writer
         )
         log.info('test results')
         log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 3), round(recall, 3), round(f1, 3)))

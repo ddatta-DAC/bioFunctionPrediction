@@ -122,7 +122,7 @@ def predict_evaluate(dataiter, thres, placeholders, modelpath):
         if step > 0 :
             log.info('f1:{}'.format(avgF1 / step))
     try:
-        avgPrec = avgPrec
+        avgPrec = avgPrec / step
         avgRecall = avgRecall / step 
         avgF1 = avgF1 / step
     except:
