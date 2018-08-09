@@ -373,6 +373,7 @@ def validate(dataiter, sess, x_inp, decoder, summary_writer):
 
 def test(dataiter, sess, x_inp, decoder, summary_writer):
     step = 0
+    THRESHOLD_RANGE = np.arange(0.1, 0.5, 0.05)
     avgPrec, avgRecall, avgF1 = (np.zeros_like(THRESHOLD_RANGE),
                                  np.zeros_like(THRESHOLD_RANGE),
                                  np.zeros_like(THRESHOLD_RANGE)
@@ -505,7 +506,7 @@ def build_model():
             test_writer
         )
         log.info('test results')
-        log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 3), round(recall, 3), round(f1, 3)))
+        log.info('precision: {}, recall: {}, F1: {}'.format(np.round(prec, 3), np.round(recall, 3), np.round(f1, 3)))
 
 
 def main(argv):
