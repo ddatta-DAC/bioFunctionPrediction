@@ -47,7 +47,6 @@ FLAGS = tf.app.flags.FLAGS
 THRESHOLD_RANGE = np.arange(0.1, 0.5, 0.05)
 
 
-
 def create_args():
     tf.app.flags.DEFINE_string(
         'resources',
@@ -371,6 +370,7 @@ def validate(dataiter, sess, x_inp, decoder, summary_writer):
     dataiter.reset()
     return (avgPrec / step, avgRecall / step, avgF1 / step)
 
+
 def test(dataiter, sess, x_inp, decoder, summary_writer):
     step = 0
     avgPrec, avgRecall, avgF1 = (np.zeros_like(THRESHOLD_RANGE),
@@ -396,7 +396,8 @@ def test(dataiter, sess, x_inp, decoder, summary_writer):
         step += 1
 
     dataiter.reset()
-    return (avgPrec / step, avgRecall / step, avgF1 / step)
+    return (avgPrec / step), (avgRecall / step), (avgF1 / step)
+
 
 def build_model():
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
@@ -454,7 +455,7 @@ def build_model():
                     step, np.round(total_loss, 3)))
             step += 1
 
-            if step % (5) == 0 :
+            if step % (5) == 0:
                 log.info('beginning validation')
                 prec, recall, f1 = validate(
                     valid_iter,
@@ -496,13 +497,16 @@ def build_model():
 
         log.info('testing model')
         # placeholders = [x_inp.name, 'y_out:0', 'thres:0']
-        prec, recall, f1 = test(test_iter, sess,
-                    x_inp,
-                    decoder,
-                    test_writer
+        prec, recall, f1 = test(
+            test_iter,
+            sess,
+            x_inp,
+            decoder,
+            test_writer
         )
         log.info('test results')
         log.info('precision: {}, recall: {}, F1: {}'.format(round(prec, 3), round(recall, 3), round(f1, 3)))
+
 
 def main(argv):
     # pretrain the conv auto encoder
