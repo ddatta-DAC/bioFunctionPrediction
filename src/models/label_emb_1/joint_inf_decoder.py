@@ -86,13 +86,9 @@ class joint_inf_decoder:
         )
         self.init_variables()
         xw = tf.einsum('ijk,kl->ijl', _x, self.W)
-        print(xw.shape)
-        cos_sim = tf.reduce_sum(tf.einsum('ijk,klm->ijm', _x, tf.transpose(self.y_inp)),axis=-1)
-        # loss = tf.losses.cosine_distance(xw,self.y_inp,axis=1)
-        cos_dist = 1 - cos_sim
-        print( cos_dist)
+        loss = tf.losses.cosine_distance(xw,self.y_inp,axis=-1,reduction=tf.losses.Reduction.NONE)
 
-        self.loss = tf.reduce_sum(cos_dist,axis=-1)
+        self.loss = tf.reduce_sum(loss,axis=1)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
         self.train = self.optimizer.minimize(self.loss)
 
