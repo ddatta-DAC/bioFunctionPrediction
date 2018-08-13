@@ -419,6 +419,7 @@ def create_label_emb_lookup():
     print ( 'create_label_emb_lookup  .... ')
 
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
+    print('1st funcs', funcs ,len(funcs))
     funcs = GODAG.initialize_idmap(funcs, FLAGS.function)
     FeatureExtractor.load(FLAGS.resources)
 
@@ -479,6 +480,8 @@ def build_model():
         label_count,
         w2v_emb_dim
     )
+
+    print('y ' , y )
     decoder.build()
     return
 
