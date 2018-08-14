@@ -39,7 +39,7 @@ except:
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('root')
 FLAGS = tf.app.flags.FLAGS
-THRESHOLD_RANGE = np.arange(0.1, 0.5, 0.05)
+THRESHOLD_RANGE = np.arange(0.25, 0.75, 0.1)
 
 
 def create_args():
@@ -348,49 +348,37 @@ def get_pretrained_cae():
 # ------------------------- #
 # Validate the final model
 # ------------------------- #
-def validate(dataiter, sess, x_inp, decoder, summary_writer):
+def validate(
+        dataiter, sess, x_inp, decoder,
+        summary_writer, target_funcs ,label_emb
+):
+    global THRESHOLD_RANGE
+    log.info(' Inside validate ::')
     step = 0
-    avgPrec, avgRecall, avgF1 = (np.zeros_like(THRESHOLD_RANGE),
-                                 np.zeros_like(THRESHOLD_RANGE),
-                                 np.zeros_like(THRESHOLD_RANGE)
-                                 )
+    avgPrec, avgRecall, avgF1 = (
+        np.zeros_like(THRESHOLD_RANGE),
+        np.zeros_like(THRESHOLD_RANGE),
+        np.zeros_like(THRESHOLD_RANGE)
+    )
+
     for x, y in dataiter:
+        y_emb = convert_y_to_emb(y, target_funcs, label_emb)
+        y_1hot = convert_y_to_1hot(y, target_funcs)
+
         prec, recall, f1 = [], [], []
         for thres in THRESHOLD_RANGE:
-            p, r, f, summary = sess.run([decoder.precision, decoder.recall,
-                                         decoder.f1score, decoder.summary],
-                                        feed_dict={decoder.ys_: y,
-                                                   x_inp: x,
-                                                   decoder.threshold: [thres]})
-            summary_writer.add_summary(summary, step)
-            prec.append(p)
-            recall.append(r)
-            f1.append(f)
-
-        avgPrec += prec
-        avgRecall += recall
-        avgF1 += f1
-        step += 1
-
-    dataiter.reset()
-    return (avgPrec / step, avgRecall / step, avgF1 / step)
-
-
-def test(dataiter, sess, x_inp, decoder, summary_writer):
-    step = 0
-    THRESHOLD_RANGE = np.arange(0.1, 0.5, 0.05)
-    avgPrec, avgRecall, avgF1 = (np.zeros_like(THRESHOLD_RANGE),
-                                 np.zeros_like(THRESHOLD_RANGE),
-                                 np.zeros_like(THRESHOLD_RANGE)
-                                 )
-    for x, y in dataiter:
-        prec, recall, f1 = [], [], []
-        for thres in THRESHOLD_RANGE:
-            p, r, f, summary = sess.run([decoder.precision, decoder.recall,
-                                         decoder.f1score, decoder.summary],
-                                        feed_dict={decoder.ys_: y,
-                                                   x_inp: x,
-                                                   decoder.threshold: [thres]})
+            p, r, f, summary = sess.run(
+                [decoder.b_prec,
+                 decoder.b_recall,
+                 decoder.b_f1,
+                 decoder.summary
+                 ],
+                feed_dict={
+                    x_inp: x,
+                    decoder.y_labels: y_1hot,
+                    decoder.y_inp: y_emb,
+                    decoder.cos_sim_threshold: thres
+                })
             summary_writer.add_summary(summary, step)
             prec.append(p)
             recall.append(r)
@@ -404,6 +392,46 @@ def test(dataiter, sess, x_inp, decoder, summary_writer):
     dataiter.reset()
     return (avgPrec / step), (avgRecall / step), (avgF1 / step)
 
+def test(dataiter, sess, x_inp, decoder,
+         summary_writer,target_funcs,label_emb):
+
+    global THRESHOLD_RANGE
+    step = 0
+    avgPrec, avgRecall, avgF1 = (
+        np.zeros_like(THRESHOLD_RANGE),
+        np.zeros_like(THRESHOLD_RANGE),
+        np.zeros_like(THRESHOLD_RANGE)
+    )
+
+    for x, y in dataiter:
+        y_1hot = convert_y_to_1hot(y, target_funcs)
+        y_emb = convert_y_to_emb(y, target_funcs, label_emb)
+        prec, recall, f1 = [], [], []
+        for thres in THRESHOLD_RANGE:
+            p, r, f, summary = sess.run(
+                [decoder.b_prec,
+                 decoder.b_recall,
+                 decoder.b_f1,
+                 decoder.summary
+                 ],
+                feed_dict={
+                    x_inp: x,
+                    decoder.y_labels: y_1hot,
+                    decoder.y_inp: y_emb,
+                    decoder.cos_sim_threshold: thres
+                })
+            summary_writer.add_summary(summary, step)
+            prec.append(p)
+            recall.append(r)
+            f1.append(f)
+
+        avgPrec += prec
+        avgRecall += recall
+        avgF1 += f1
+        step += 1
+
+    dataiter.reset()
+    return (avgPrec / step), (avgRecall / step), (avgF1 / step)
 
 # ------------------------------------ #
 
@@ -452,27 +480,36 @@ def filter_y(y, target_funcs):
     return y
 
 
-def convert_y(y, target_funcs, label_emb):
+# Convert y from [batch * list_of_ids]
+# To : [batch * num_labels * emb_dimension]
+def convert_y_to_emb(y, target_funcs, label_emb):
     global w2v_emb_dim
     y = filter_y(y, target_funcs)
-    res_y = np.zeros([y.shape[0],label_emb.shape[0],label_emb.shape[1]])
+
+    res_y = np.zeros([
+        y.shape[0],
+        label_emb.shape[0],
+        label_emb.shape[1]
+    ])
 
     for i in range(y.shape[0]):
         _y = y[i]
         mask = np.zeros(label_emb.shape)
         mask[_y] = 1.0
         _y = label_emb * mask
-        print(_y )
-        res_y [i] = _y
+        res_y[i] = _y
     return res_y
 
 
 # ------------------------------------ #
 
-def joint_inf_layer():
-    global w2v_emb_dim
-
-    return
+def convert_y_to_1hot(y, target_funcs):
+    y = filter_y(y, target_funcs)
+    res_y = np.zeros([y.shape[0], len(target_funcs) + 1])
+    for i in range(y.shape[0]):
+        _y = y[i]
+        res_y[i, _y] = 1.0
+    return res_y
 
 
 # ------------------------------------ #
@@ -488,29 +525,134 @@ def build_model():
     sess, cae_model_obj, x_inp, encoder_op = get_pretrained_cae()
 
     label_emb = create_label_emb_lookup()
-    label_count = len(target_funcs)
+    num_labels = len(target_funcs) + 1
     x_shape = encoder_op.shape.as_list()[1:]
 
-    x, y = train_iter.__next__()
+    # x, y = train_iter.__next__()
+    # y_emb = convert_y_to_emb(y, target_funcs, label_emb)
+    # y_1hot = convert_y_to_1hot(y, target_funcs)
 
     y_shape = [
-        label_count,
+        num_labels,
         w2v_emb_dim
     ]
 
     decoder = joint_inf_decoder(
+        encoder_op,
         x_shape,
         y_shape,
-        label_count,
+        num_labels,
         w2v_emb_dim
     )
-
-    y = convert_y(y, target_funcs,label_emb)
-
-
     decoder.build()
+
+    init = tf.global_variables_initializer()
+    init.run(session=sess)
+    init_l = tf.local_variables_initializer()
+    init_l.run(session=sess)
+    chkpt = tf.train.Saver(max_to_keep=4)
+    train_writer = tf.summary.FileWriter(
+        FLAGS.outputdir + '/train', sess.graph
+    )
+    test_writer = tf.summary.FileWriter(FLAGS.outputdir + '/test')
+
+    # ------------- Train --------------- #
+    step = 0
+    validation_check_steps = 5
+    maxwait = 10
+    best_f1 = 0.0
+    wait = 0
+    best_thres = 0
+    metagraphFlag = False
+
+    model_savename = 'label_emb_1_{}'.format(int(time.time()))
+    meta_graph_file_name = os.path.join(
+        FLAGS.outputdir,
+        model_savename,
+        'model_{}.meta'.format(FLAGS.function)
+    )
+    tf.train.export_meta_graph(filename=meta_graph_file_name)
+
+    log.info('starting epochs')
+    for epoch in range(FLAGS.num_epochs):
+        for x, y in train_iter:
+            if x.shape[0] != y.shape[0]:
+                raise Exception(
+                    'invalid, x :: {} , y :: {}'.format(str(x.shape), str(y.shape))
+                )
+
+            y_emb = convert_y_to_emb(y, target_funcs, label_emb)
+            y_1hot = convert_y_to_1hot(y, target_funcs)
+
+            _, total_loss = sess.run(
+                [decoder.train, decoder.batch_loss],
+                feed_dict={
+                    x_inp: x,
+                    decoder.y_inp: y_emb
+                }
+            )
+
+            log.info('step :: {}, total_loss :: {} '.format(step, np.round(total_loss, 3)))
+            step += 1
+
+            if step % (validation_check_steps) == 0:
+                log.info('beginning validation')
+                prec, recall, f1 = validate(
+                    valid_iter,
+                    sess,
+                    x_inp,
+                    decoder,
+                    test_writer,
+                    target_funcs,
+                    label_emb
+                )
+                thres = np.argmax(np.round(f1, 3))
+                log.info('epoch: {} \n precision: {}, recall: {}, f1: {}'.format(
+                    epoch,
+                    np.round(prec, 2)[thres],
+                    np.round(recall, 2)[thres],
+                    np.round(f1, 2)[thres])
+                )
+                log.info('selected threshold is {}'.format(thres / 10 + 0.1))
+                if f1[thres] > (best_f1 + 1e-3):
+                    best_f1 = f1[thres]
+                    best_thres = THRESHOLD_RANGE[thres]
+                    wait = 0
+                    chkpt.save(
+                        sess,
+                        os.path.join(
+                            FLAGS.outputdir,
+                            model_savename,
+                            'model_{}_{}'.format(FLAGS.function, step)
+                        ),
+                        global_step=step,
+                        write_meta_graph=metagraphFlag
+                    )
+                    metagraphFlag = False
+                else:
+                    wait += 1
+                    if wait > maxwait:
+                        log.info('f1 didnt improve for last {} validation steps, so stopping'.format(maxwait))
+                        break
+
+        train_iter.reset()
+
+    log.info('----:: Testing Model ::----')
+    prec, recall, f1 = test(
+        test_iter,
+        sess,
+        x_inp,
+        decoder,
+        test_writer,
+        target_funcs,
+        label_emb
+    )
+    log.info('Test results')
+    log.info('precision: {}, recall: {}, F1: {}'.format(np.round(prec, 3), np.round(recall, 3), np.round(f1, 3)))
+
     return
 
+# ------------------------------------------------- #
 
 def main(argv):
     build_model()
