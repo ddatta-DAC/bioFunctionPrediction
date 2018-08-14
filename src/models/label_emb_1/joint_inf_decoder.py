@@ -91,6 +91,12 @@ class joint_inf_decoder:
         self.init_variables()
         self.xw = tf.einsum('ijk,kl->ijl', _x, self.W)
 
+        try:
+            self.xw = tf.nn.l2_normalize(self.xw,dim=-1)
+            self.y_inp = tf.nn.l2_normalize(self.y_inp,dim=-1)
+        except:
+            self.xw = tf.nn.l2_normalize(self.xw, axis=-1)
+            self.y_inp = tf.nn.l2_normalize(self.y_inp, axis=-1)
 
         loss = tf.losses.cosine_distance(self.xw,self.y_inp,axis=-1,reduction=tf.losses.Reduction.NONE)
         loss = tf.square(loss)
@@ -114,12 +120,17 @@ class joint_inf_decoder:
             shape = [None, self.num_labels ]
         )
 
+        try:
+            self.xw = tf.nn.l2_normalize(self.xw,dim=-1)
+            self.y_inp = tf.nn.l2_normalize(self.y_inp,dim=-1)
+        except:
+            self.xw = tf.nn.l2_normalize(self.xw, axis=-1)
+            self.y_inp = tf.nn.l2_normalize(self.y_inp, axis=-1)
+
         cos_dist = tf.losses.cosine_distance(self.xw, self.y_inp, axis=-1, reduction=tf.losses.Reduction.NONE)
         self.pred_labels = tf.to_int32(cos_dist <= self.cos_sim_threshold)
         self.pred_labels = tf.squeeze(self.pred_labels)
 
-        print(self.pred_labels)
-        print (' Labels :: ', self.pred_labels.shape)
 
         b_recall = tf.metrics.recall(
             self.y_labels,
