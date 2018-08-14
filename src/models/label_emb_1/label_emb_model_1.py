@@ -43,7 +43,6 @@ THRESHOLD_RANGE = np.arange(0.1, 0.5, 0.05)
 
 
 def create_args():
-
     tf.app.flags.DEFINE_string(
         'resources',
         './data',
@@ -133,7 +132,6 @@ def get_cae_pretrained_dir(model_name_prefix):
 
 
 def get_iterators():
-
     funcs = pd.read_pickle(os.path.join(
         FLAGS.resources,
         '{}.pkl'.format((FLAGS.function).lower())
@@ -152,7 +150,7 @@ def get_iterators():
         filterByEvidenceCodes=True,
         functype=FLAGS.function,
         featuretype='ngrams',
-        onlyLeafNodes =True
+        onlyLeafNodes=True
     )
 
     valid_iter = DataIterator(
@@ -377,6 +375,7 @@ def validate(dataiter, sess, x_inp, decoder, summary_writer):
     dataiter.reset()
     return (avgPrec / step, avgRecall / step, avgF1 / step)
 
+
 def test(dataiter, sess, x_inp, decoder, summary_writer):
     step = 0
     THRESHOLD_RANGE = np.arange(0.1, 0.5, 0.05)
@@ -405,75 +404,100 @@ def test(dataiter, sess, x_inp, decoder, summary_writer):
     dataiter.reset()
     return (avgPrec / step), (avgRecall / step), (avgF1 / step)
 
-def get_word2vec_emb():
 
+# ------------------------------------ #
+
+def get_word2vec_emb():
+    global w2v_emb_dim
     file_loc = './../word2vec_1'
     file_name = 'GO_word_embed_dict.pkl'
-    with open(os.path.join(file_loc,file_name), 'rb') as file_handle:
+    with open(os.path.join(file_loc, file_name), 'rb') as file_handle:
         emb_dict = pickle.load(file_handle)
+        w2v_emb_dim = len(emb_dict[list(emb_dict.keys())[0]])
         return emb_dict
 
 
-# TODO : FIX this function!!
+# ------------------------------------ #
+
 def create_label_emb_lookup():
-    print ( 'create_label_emb_lookup  .... ')
-
-    funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
-    print('1st funcs', funcs ,len(funcs))
-    funcs = GODAG.initialize_idmap(funcs, FLAGS.function)
-    FeatureExtractor.load(FLAGS.resources)
-
-    w2v_emb_size = 512
+    global w2v_emb_dim
     w2v_emb_dict = get_word2vec_emb()
-    goids = GODAG.GOIDS
-
 
     # format the keys to add 'GO:'
     w2v_emb_dict = {
-        'GO:' + k : v for k,v in w2v_emb_dict.items()
+        'GO:' + k: v for k, v in w2v_emb_dict.items()
     }
 
+    funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
+    target_funcs = funcs
+    FeatureExtractor.load(FLAGS.resources)
 
-    # 1 more since 0 means unknown
-    emb_map = np.zeros([len(funcs)+1,w2v_emb_size])
-    for k, emb in w2v_emb_dict.items():
+    label_count = len(target_funcs)
+    _idmap = GODAG.idmap
+    yid_vec_lookup = np.zeros([label_count + 1, w2v_emb_dim])
+
+    for i in range(label_count):
+        idx = _idmap[target_funcs[i]]
         try:
-            idx = goids.index(k)+1
-            emb_map[idx] = emb
-        except :
+            yid_vec_lookup[idx] = w2v_emb_dict[target_funcs[i]]
+        except:
             pass
-    print (emb_map.shape)
-    return emb_map
+    return yid_vec_lookup
 
+
+# ------------------------------------ #
+
+def filter_y(y, target_funcs):
+    y = y * (~(y > len(target_funcs)))
+    return y
+
+
+def convert_y(y, target_funcs, label_emb):
+    global w2v_emb_dim
+    y = filter_y(y, target_funcs)
+    res_y = np.zeros([y.shape[0],label_emb.shape[0],label_emb.shape[1]])
+
+    for i in range(y.shape[0]):
+        _y = y[i]
+        mask = np.zeros(label_emb.shape)
+        mask[_y] = 1.0
+        _y = label_emb * mask
+        print(_y )
+        res_y [i] = _y
+    return res_y
+
+
+# ------------------------------------ #
 
 def joint_inf_layer():
-
-
+    global w2v_emb_dim
 
     return
 
 
-def build_model():
+# ------------------------------------ #
 
-    w2v_emb_dim = 512
+def build_model():
+    global w2v_emb_dim
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
+    target_funcs = funcs
     funcs = GODAG.initialize_idmap(funcs, FLAGS.function)
     FeatureExtractor.load(FLAGS.resources)
-
 
     train_iter, test_iter, valid_iter = get_iterators()
     sess, cae_model_obj, x_inp, encoder_op = get_pretrained_cae()
 
     label_emb = create_label_emb_lookup()
-    label_count = len(funcs)
+    label_count = len(target_funcs)
     x_shape = encoder_op.shape.as_list()[1:]
-    print(encoder_op.shape.as_list()[1:])
 
-    x,y = train_iter.__next__()
-    print(x.shape)
-    print(y.shape)
+    x, y = train_iter.__next__()
 
-    y_shape = [label_count,w2v_emb_dim]
+    y_shape = [
+        label_count,
+        w2v_emb_dim
+    ]
+
     decoder = joint_inf_decoder(
         x_shape,
         y_shape,
@@ -481,7 +505,9 @@ def build_model():
         w2v_emb_dim
     )
 
-    print('y ' , y )
+    y = convert_y(y, target_funcs,label_emb)
+
+
     decoder.build()
     return
 
@@ -489,8 +515,7 @@ def build_model():
 def main(argv):
     build_model()
 
+
 if __name__ == "__main__":
     create_args()
     tf.app.run(main)
-
-
