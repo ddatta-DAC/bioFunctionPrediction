@@ -22,6 +22,9 @@ import numpy as np
 import glob
 import tensorflow as tf
 import pickle
+import sys
+sys.path.append('./..')
+sys.path.append('./../..')
 
 try:
     from utils.dataloader import GODAG, FeatureExtractor
@@ -558,7 +561,7 @@ def build_model():
 
     # ------------- Train --------------- #
     step = 0
-    validation_check_steps = 5
+    validation_check_steps = 100
     maxwait = 10
     best_f1 = 0.0
     wait = 0

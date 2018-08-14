@@ -61,7 +61,7 @@ class joint_inf_decoder:
         #     name='x_inf_inp'
         # )
 
-        self.x_inp = tf.layers.flatten(self.x_inp,'x_inf_inp')
+        self.x_inp = tf.contrib.layers.flatten(self.x_inp,'x_inf_inp')
         y_shape = [None]
         y_shape.extend( self.y_shape)
 
@@ -73,7 +73,7 @@ class joint_inf_decoder:
 
     def build(self):
         self.setup_inputs()
-        self.x_inp = tf.layers.flatten(self.x_inp)
+        #self.x_inp = tf.layers.flatten(self.x_inp)
         self.x_dim = self.x_inp.shape.as_list()[-1]
 
         '''
@@ -92,7 +92,7 @@ class joint_inf_decoder:
         self.xw = tf.einsum('ijk,kl->ijl', _x, self.W)
 
 
-        loss = tf.losses.cosine_distance(self.xw,self.y_inp,axis=-1,reduction=tf.losses.Reduction.NONE)
+        loss = tf.losses.cosine_distance(self.xw,self.y_inp,dim=-1,reduction=tf.losses.Reduction.NONE)
         loss = tf.square(loss)
         self.cos_loss = tf.reduce_mean(loss,axis=1,name='cos_loss')
         self.batch_loss = tf.reduce_mean(self.cos_loss)
@@ -114,7 +114,7 @@ class joint_inf_decoder:
             shape = [None, self.num_labels ]
         )
 
-        cos_dist = tf.losses.cosine_distance(self.xw, self.y_inp, axis=-1, reduction=tf.losses.Reduction.NONE)
+        cos_dist = tf.losses.cosine_distance(self.xw, self.y_inp, dim=-1, reduction=tf.losses.Reduction.NONE)
         self.pred_labels = tf.to_int32(cos_dist <= self.cos_sim_threshold)
         self.pred_labels = tf.squeeze(self.pred_labels)
 
