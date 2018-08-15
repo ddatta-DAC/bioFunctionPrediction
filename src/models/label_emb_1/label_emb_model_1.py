@@ -23,6 +23,7 @@ import glob
 import tensorflow as tf
 import pickle
 import sys
+import pdb
 sys.path.append('./..')
 sys.path.append('./../..')
 
@@ -583,17 +584,18 @@ def build_model():
                 raise Exception(
                     'invalid, x :: {} , y :: {}'.format(str(x.shape), str(y.shape))
                 )
-
+            
             y_emb = convert_y_to_emb(y, target_funcs, label_emb)
             y_1hot = convert_y_to_1hot(y, target_funcs)
-
-            _, total_loss = sess.run(
+            
+            _ , total_loss = sess.run(
                 [decoder.train, decoder.batch_loss],
-                feed_dict={
+                feed_dict= {
                     x_inp: x,
-                    decoder.y_inp: y_emb
+                    decoder.y_inp : y_emb
                 }
             )
+            
 
             log.info('step :: {}, total_loss :: {} '.format(step, np.round(total_loss, 3)))
             step += 1

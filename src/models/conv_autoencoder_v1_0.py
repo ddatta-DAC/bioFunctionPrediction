@@ -141,7 +141,7 @@ class ConvAutoEncoder(object):
 
             print(' Shape of x ', self.x.shape)
             emb_op = tf.einsum('ijk,kl->ijl', self.x, self.embed_w)
-            print(emb_op)
+            print('Shape of emb layer', emb_op.shape)
             self.emb_op = tf.expand_dims(emb_op, axis=3)
             cur_inp = self.emb_op
             conv_layer_ops = []
@@ -159,11 +159,11 @@ class ConvAutoEncoder(object):
                 # print(conv_i)
                 log.info('[Conv AE] Encoder layer i output shape : {}'.format(conv_i.shape))
                 conv_layer_ops.append(conv_i)
-                print(conv_i.shape)
+                print('Conv layer {} :: {} '.format( i + 1 ,conv_i.shape))
                 cur_inp = conv_i
 
         self.enc_out = cur_inp
-
+        print ('Conv AE Encoder op shape :: ', self.enc_out.shape )
         with tf.name_scope('Decoder'):
             deconv_layer_ops = []
             for i in range(self.num_conv_layers - 1, -1, -1):

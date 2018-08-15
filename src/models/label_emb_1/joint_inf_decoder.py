@@ -53,13 +53,6 @@ class joint_inf_decoder:
         return
 
     def setup_inputs(self):
-        # x_shape = [None]
-        # x_shape.extend(self.x_shape)
-        # self.x_inp = tf.placeholder(
-        #     dtype=tf.float64,
-        #     shape=x_shape,
-        #     name='x_inf_inp'
-        # )
 
         self.x_inp = tf.contrib.layers.flatten(self.x_inp,'x_inf_inp')
         y_shape = [None]
@@ -70,10 +63,16 @@ class joint_inf_decoder:
             shape=y_shape,
             name='y_inf_inp'
         )
+       
+        return 
+
+# ------------------------- # 
 
     def build(self):
+        
         self.setup_inputs()
-        #self.x_inp = tf.layers.flatten(self.x_inp)
+        
+        # self.x_inp = tf.layers.flatten(self.x_inp)
         self.x_dim = self.x_inp.shape.as_list()[-1]
 
         '''
@@ -93,17 +92,17 @@ class joint_inf_decoder:
 
         try:
             self.xw = tf.nn.l2_normalize(self.xw,dim=-1)
-            self.y_inp = tf.nn.l2_normalize(self.y_inp,dim=-1)
+            self.y_vals = tf.nn.l2_normalize(self.y_inp,dim=-1)
         except:
             self.xw = tf.nn.l2_normalize(self.xw, axis=-1)
-            self.y_inp = tf.nn.l2_normalize(self.y_inp, axis=-1)
+            self.y_vals = tf.nn.l2_normalize(self.y_inp, axis=-1)
 
-        loss = tf.losses.cosine_distance(self.xw,self.y_inp,dim=-1,reduction=tf.losses.Reduction.NONE)
+        loss = tf.losses.cosine_distance(self.xw, self.y_vals, dim=-1, reduction=tf.losses.Reduction.NONE)
         loss = tf.square(loss)
-        self.cos_loss = tf.reduce_mean(loss,axis=1,name='cos_loss')
+        self.cos_loss = tf.reduce_mean(loss, axis=1, name='cos_loss')
         self.batch_loss = tf.reduce_mean(self.cos_loss)
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3,name='final_optimizer')
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3, name='final_optimizer')
         self.train = self.optimizer.minimize(self.batch_loss)
         tf.summary.scalar('loss', self.batch_loss)
 
@@ -122,12 +121,12 @@ class joint_inf_decoder:
 
         try:
             self.xw = tf.nn.l2_normalize(self.xw,dim=-1)
-            self.y_inp = tf.nn.l2_normalize(self.y_inp,dim=-1)
+            self.y_vals = tf.nn.l2_normalize(self.y_inp,dim=-1)
         except:
             self.xw = tf.nn.l2_normalize(self.xw, axis=-1)
-            self.y_inp = tf.nn.l2_normalize(self.y_inp, axis=-1)
+            self.y_vals = tf.nn.l2_normalize(self.y_inp, axis=-1)
 
-        cos_dist = tf.losses.cosine_distance(self.xw, self.y_inp, axis=-1, reduction=tf.losses.Reduction.NONE)
+        cos_dist = tf.losses.cosine_distance(self.xw, self.y_vals, dim=-1, reduction=tf.losses.Reduction.NONE)
         self.pred_labels = tf.to_int32(cos_dist <= self.cos_sim_threshold)
         self.pred_labels = tf.squeeze(self.pred_labels)
 
