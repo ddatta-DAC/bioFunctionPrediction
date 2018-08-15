@@ -128,17 +128,19 @@ class joint_inf_decoder:
 
         cos_dist = tf.losses.cosine_distance(self.xw, self.y_vals, dim=-1, reduction=tf.losses.Reduction.NONE)
         self.pred_labels = tf.to_int32(cos_dist <= self.cos_sim_threshold)
-        self.pred_labels = tf.squeeze(self.pred_labels)
+        self.pred_labels = tf.squeeze(self.pred_labels, name="predictions")
 
 
         b_recall = tf.metrics.recall(
             self.y_labels,
-            self.pred_labels
+            self.pred_labels,
+            name='recall'
         )
 
         b_prec = tf.metrics.precision(
             self.y_labels,
             self.pred_labels
+            name='prec'
         )
         self.b_recall = tf.reduce_mean(b_recall)
         self.b_prec = tf.reduce_mean(b_prec)
