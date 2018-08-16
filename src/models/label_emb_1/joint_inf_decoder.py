@@ -34,7 +34,7 @@ class joint_inf_decoder:
         self.w2v_emb_dim = w2v_emb_dim
         return
 
-    def init_variables(self):
+    def init_variables(self,trainable=True):
         with tf.name_scope('inf_w_b'):
             initial_val = tf.truncated_normal(
                 shape = [
@@ -47,7 +47,7 @@ class joint_inf_decoder:
 
             self.W = tf.Variable(
                 initial_value= initial_val,
-                trainable=True,
+                trainable=trainable,
                 name = 'W'
             )
         return
@@ -64,11 +64,13 @@ class joint_inf_decoder:
             name='y_inf_inp'
         )
        
-        return 
+        return
+
+
 
 # ------------------------- # 
 
-    def build(self):
+    def build(self , pretrained_dir = None):
         
         self.setup_inputs()
         
@@ -87,7 +89,11 @@ class joint_inf_decoder:
             ),
             [-1,self.num_labels,self.x_dim]
         )
-        self.init_variables()
+        trainable = True
+        if pretrained_dir is None:
+            trainable = False
+
+        self.init_variables(trainable)
         self.xw = tf.einsum('ijk,kl->ijl', _x, self.W)
 
         try:
@@ -116,7 +122,8 @@ class joint_inf_decoder:
         )
         self.y_labels  = tf.placeholder(
             dtype=tf.float32,
-            shape = [None, self.num_labels ]
+            shape = [None, self.num_labels ],
+            name = "y_labels"
         )
 
         try:
@@ -139,7 +146,7 @@ class joint_inf_decoder:
 
         b_prec = tf.metrics.precision(
             self.y_labels,
-            self.pred_labels
+            self.pred_labels,
             name='prec'
         )
         self.b_recall = tf.reduce_mean(b_recall)
@@ -150,4 +157,8 @@ class joint_inf_decoder:
         tf.summary.scalar('Recall', self.b_recall)
         tf.summary.scalar('F1', self.b_f1)
         self.summary = tf.summary.merge_all()
+        self.names = [n.name + ':0' for n in tf.get_default_graph().as_graph_def().node]
         return
+
+    def return_wt_list_to_restore(self):
+        return self.names
