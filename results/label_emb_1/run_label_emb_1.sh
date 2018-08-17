@@ -11,9 +11,9 @@
 ##SBATCH -A fungcat
 
 ## Check sinfo before setting this
-#SBATCH --nodelist hu004
+#SBATCH --nodelist hu010
 
-#SBATCH -t 360:00
+#SBATCH -t 1080:00
 #SBATCH --mem=30G
 
 ## Uncomment for huckleberry
@@ -50,7 +50,7 @@ mkdir -p $OUTDIR
 
 BATCHSIZE=16
 
-python ${SCRIPT_ROOT}/label_emb_model_1.py --resources ${SCRIPT_ROOT}/../../../resources --function mf  --outputdir ./../../../results/label_emb_1/ --trainsize $(( 18815 /  $BATCHSIZE )) --testsize  $(( 5846 /  $BATCHSIZE )) --validationsize  $(( 4704 /  $BATCHSIZE )) --inputfile ../../../resources/data/data_MF --batchsize $BATCHSIZE --num_epochs 10 --featuretype ngrams --maxseqlen 2002
+python ${SCRIPT_ROOT}/label_emb_model_1.py --resources ${SCRIPT_ROOT}/../../../resources --function mf  --outputdir ./../../../results/label_emb_1/ --trainsize $(( 18815 /  $BATCHSIZE )) --testsize  $(( 5846 /  $BATCHSIZE )) --validationsize  $(( 4704 /  $BATCHSIZE )) --inputfile ../../../resources/data/data_MF --batchsize $BATCHSIZE --num_epochs 15 --featuretype ngrams --maxseqlen 2002 --predict False
 
 cd -
 source deactivate
