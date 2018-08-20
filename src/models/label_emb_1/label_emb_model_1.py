@@ -42,7 +42,7 @@ except:
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('root')
 FLAGS = tf.app.flags.FLAGS
-THRESHOLD_RANGE = np.arange(0.10, 0.40, 0.05)
+THRESHOLD_RANGE = np.arange(0.05, 0.50, 0.05)
 target_funcs_file_prefix = 'target_functions'
 
 
@@ -584,7 +584,7 @@ def build_model():
 
     # ------------- Train --------------- #
     step = 0
-    validation_check_steps = 800
+    validation_check_steps = 400
     maxwait = 10
     best_f1 = 0.0
     wait = 0
