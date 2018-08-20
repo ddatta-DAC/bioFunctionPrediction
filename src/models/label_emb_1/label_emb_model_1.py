@@ -108,9 +108,9 @@ def create_args():
         'ngrams',
         'location of pretrained embedding'
     )
-    tf.app.flags.DEFINE_boolean(
+    tf.app.flags.DEFINE_integer(
         'predict',
-        False,
+        0,
         'whether to just check the model with test data'
     )
 
@@ -867,7 +867,7 @@ def predict_only():
 # ------------------------------------------------- #
 
 def main(argv):
-    if FLAGS.predict == False:
+    if FLAGS.predict == 0:
         build_model()
     else:
         predict_only()

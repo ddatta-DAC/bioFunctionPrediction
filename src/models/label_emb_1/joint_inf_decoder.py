@@ -50,6 +50,21 @@ class joint_inf_decoder:
                 trainable=trainable,
                 name = 'W'
             )
+
+            initial_val = tf.truncated_normal(
+                shape=[
+                    self.num_labels,
+                    self.w2v_emb_dim
+                ],
+                stddev=0.1,
+                dtype=tf.float32
+            )
+
+            self.b = tf.Variable(
+                initial_value=initial_val,
+                trainable=trainable,
+                name='b'
+            )
         return
 
     def setup_inputs(self):
@@ -63,7 +78,6 @@ class joint_inf_decoder:
             shape=y_shape,
             name='y_inf_inp'
         )
-       
         return
 
 
@@ -95,17 +109,17 @@ class joint_inf_decoder:
 
         self.init_variables(trainable)
         self.xw = tf.einsum('ijk,kl->ijl', _x, self.W)
+        self.xw_b = tf.add(self.xw,self.b)
+        print('xw plus b', self.xw_b.shape)
 
         try:
-            self.xw = tf.nn.l2_normalize(self.xw,dim=-1)
+            self.xw_b = tf.nn.l2_normalize(self.xw,dim=-1)
             self.y_vals = tf.nn.l2_normalize(self.y_inp,dim=-1)
         except:
-            self.xw = tf.nn.l2_normalize(self.xw, axis=-1)
+            self.xw_b = tf.nn.l2_normalize(self.xw, axis=-1)
             self.y_vals = tf.nn.l2_normalize(self.y_inp, axis=-1)
 
         loss = tf.losses.cosine_distance(self.xw, self.y_vals, dim=-1, reduction=tf.losses.Reduction.NONE)
-        #loss = tf.abs(loss,dim=-1)
-        #loss = tf.square(loss)
         self.cos_loss = tf.reduce_mean(loss, axis=1, name='cos_loss')
         self.batch_loss = tf.reduce_mean(self.cos_loss)
 
@@ -128,10 +142,10 @@ class joint_inf_decoder:
         )
 
         try:
-            self.xw = tf.nn.l2_normalize(self.xw,dim=-1)
+            self.xw_b = tf.nn.l2_normalize(self.xw,dim=-1)
             self.y_vals = tf.nn.l2_normalize(self.y_inp,dim=-1)
         except:
-            self.xw = tf.nn.l2_normalize(self.xw, axis=-1)
+            self.xw_b = tf.nn.l2_normalize(self.xw, axis=-1)
             self.y_vals = tf.nn.l2_normalize(self.y_inp, axis=-1)
 
         cos_dist = tf.losses.cosine_distance(self.xw, self.y_vals, dim=-1, reduction=tf.losses.Reduction.NONE)
