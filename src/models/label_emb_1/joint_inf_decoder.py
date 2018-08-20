@@ -109,7 +109,7 @@ class joint_inf_decoder:
         self.cos_loss = tf.reduce_mean(loss, axis=1, name='cos_loss')
         self.batch_loss = tf.reduce_mean(self.cos_loss)
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-2, name='final_optimizer')
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.005, name='final_optimizer')
         self.train = self.optimizer.minimize(self.cos_loss)
         tf.summary.scalar('loss', self.batch_loss)
 

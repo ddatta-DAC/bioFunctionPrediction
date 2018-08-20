@@ -31,21 +31,19 @@ sys.path.append('./../..')
 try:
     from utils.dataloader import GODAG, FeatureExtractor
     from utils.dataloader import DataIterator, DataLoader
-    from predict import predict_evaluate
     from models.conv_autoencoder import ConvAutoEncoder
     from models.conv_autoencoder_v1_0 import ConvAutoEncoder
     from models.label_emb_1.joint_inf_decoder import joint_inf_decoder
 except:
     from bioFunctionPrediction.src.utils.dataloader import GODAG, FeatureExtractor
     from bioFunctionPrediction.src.utils.dataloader import DataIterator, DataLoader
-    from bioFunctionPrediction.src.predict import predict_evaluate
     from bioFunctionPrediction.src.models.conv_autoencoder_v1_0 import ConvAutoEncoder
     from bioFunctionPrediction.src.models.label_emb_1.joint_inf_decoder import joint_inf_decoder
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('root')
 FLAGS = tf.app.flags.FLAGS
-THRESHOLD_RANGE = np.arange(0.25, 0.75, 0.1)
-target_funcs_file = 'target_functions.pkl'
+THRESHOLD_RANGE = np.arange(0.10, 0.40, 0.05)
+target_funcs_file_prefix = 'target_functions'
 
 
 def create_args():
@@ -541,6 +539,10 @@ def convert_y_to_1hot(y, target_funcs):
 
 def build_model():
     global w2v_emb_dim
+    global target_funcs_file_prefix
+    
+    target_funcs_file = '{}_{}.pkl'.format(target_funcs_file_prefix,FLAGS.function)
+
     funcs = pd.read_pickle(os.path.join(FLAGS.resources, '{}.pkl'.format((FLAGS.function).lower())))['functions'].values
     target_funcs = funcs
     funcs = GODAG.initialize_idmap(funcs, FLAGS.function)
@@ -582,14 +584,14 @@ def build_model():
 
     # ------------- Train --------------- #
     step = 0
-    validation_check_steps = 100
+    validation_check_steps = 800
     maxwait = 10
     best_f1 = 0.0
     wait = 0
     best_thres = 0
     metagraphFlag = True
 
-    model_savename = 'label_emb_1_{}'.format(int(time.time()))
+    model_savename = 'label_emb_1_{}_{}'.format(int(time.time()),FLAGS.function)
     meta_graph_file_name = os.path.join(
         FLAGS.outputdir,
         model_savename,
@@ -681,10 +683,10 @@ def build_model():
     )
     print('----------------')
     log.info('Test results')
-    log.info('Threshold: {} ',format(THRESHOLD_RANGE))
-    log.info('Precision : {} '.format(np.round(prec, 3)))
-    log.info('Recall : {} '.format( np.round(recall, 3)))
-    log.info('F1 : {} '. format(np.round(f1, 3)))
+    log.info('Threshold : {} '.format( THRESHOLD_RANGE ))
+    log.info('Precision : {} '.format( np.round(prec, 4) ))
+    log.info('Recall    : {} '.format( np.round(recall, 4) ))
+    log.info('F1        : {} '.format( np.round(f1, 4) ))
     print('----------------')
     return
 
@@ -715,9 +717,10 @@ def get_pretrained_dir(model_name_prefix):
 def predict_only():
     log.info('Running prediction')
     global w2v_emb_dim
-    global target_funcs_file
+    global target_funcs_file_prefix
 
     # --- Load in saved data --- #
+    target_funcs_file = '{}_{}.pkl'.format(target_funcs_file_prefix, FLAGS.function)
 
     with open(os.path.join(FLAGS.outputdir, 'GO_IDMAPPING.json')) as inf:
         idmapping = json.load(inf)
@@ -755,7 +758,7 @@ def predict_only():
     )
     cae_model_obj.build(cae_pretrained_dir)
 
-    model_name_prefix = 'label_emb_1'
+    model_name_prefix = 'label_emb_1_{}'.format(FLAGS.function)
     complete_pretrained_dir, complete_meta_file = get_pretrained_dir(model_name_prefix)
 
     x_inp = None
