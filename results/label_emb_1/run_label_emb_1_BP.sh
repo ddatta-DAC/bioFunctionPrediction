@@ -13,7 +13,7 @@
 ## Check sinfo before setting this
 #SBATCH --nodelist hu010
 
-#SBATCH -t 1080:00
+#SBATCH -t 1250:00
 #SBATCH --mem=30G
 
 ## Uncomment for huckleberry
@@ -40,17 +40,17 @@ source activate venv
 #LOCAL="workspace"
 LOCAL="Code/fungcat"
 #### Code for running python
-RESULTDIR="${HOME}/${LOCAL}/bioFunctionPrediction/results/label_emb_2"
-SCRIPT_ROOT="${HOME}/${LOCAL}/bioFunctionPrediction/src/models/label_emb_2/"
+RESULTDIR="${HOME}/${LOCAL}/bioFunctionPrediction/results/label_emb_1"
+SCRIPT_ROOT="${HOME}/${LOCAL}/bioFunctionPrediction/src/models/label_emb_1/"
 cd $SCRIPT_ROOT
 DATA="${HOME}/${LOCAL}/bioFunctionPrediction/resources/data"
 FUNCTION="mf"
-OUTDIR="${RESULTDIR}/label_emb_2_${FUNCTION}_$( date -I)"
+OUTDIR="${RESULTDIR}/label_emb_1_${FUNCTION}_$( date -I)"
 mkdir -p $OUTDIR
 
 BATCHSIZE=16
 
-python ${SCRIPT_ROOT}/label_emb_model_2.py --resources ${SCRIPT_ROOT}/../../../resources --function mf  --outputdir ./../../../results/label_emb_2/ --trainsize $(( 18815 /  $BATCHSIZE )) --testsize  $(( 5846 /  $BATCHSIZE )) --validationsize  $(( 4704 /  $BATCHSIZE )) --inputfile ../../../resources/data/data_MF --batchsize $BATCHSIZE --num_epochs 15 --featuretype ngrams --maxseqlen 2002 --predict 0
+python ${SCRIPT_ROOT}/label_emb_model_1.py --resources ${SCRIPT_ROOT}/../../../resources --function bp  --outputdir ./../../../results/label_emb_1/ --trainsize $(( 27056 /  $BATCHSIZE )) --testsize  $(( 8444 /  $BATCHSIZE )) --validationsize  $(( 6765 /  $BATCHSIZE )) --inputfile ../../../resources/data/data_BP --batchsize $BATCHSIZE --num_epochs 12 --featuretype ngrams --maxseqlen 2002 --predict False
 
 cd -
 source deactivate
