@@ -120,6 +120,20 @@ def load_labelembedding(path):
     reorderedmat = modelroot.syn0[neworder, :]
     return reorderedmat, [i for i in GODAG.GOIDS if i not in removeset] #(np.vstack([np.zeros(reorderedmat.shape[1]), reorderedmat])).astype(np.float32)
 
+# ---------------------------- #
+# ---- A customized function , variation of load_label_embedding ----#
+
+def load_labelembedding_node2vec(path):
+    from gensim.models import KeyedVectors
+    model = KeyedVectors.load_word2vec_format(path)
+    d_json = {
+        goid:model.wv.wv.syn0[goObj.index,:]
+               for goid,goObj in model.wv.vocab.items()
+    }
+
+    return d_json
+
+# ---------------------------- #
 
 def load_pretrained_embedding(path):
     import pandas as pd
